@@ -1,0 +1,143 @@
+<html>
+    <head>
+        <title>Automatic database filler</title>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+        <script type="text/javascript" src="//code.jquery.com/jquery-3.4.1.min.js"></script>
+        <style type="text/css">
+            * {
+                /* box-shadow: 0px 0px 3px 1px rgba(99,99,99,0.2); */
+            }
+            body {
+                padding-top: 40px;
+            }
+            .data-table {
+                position: relative;
+                padding-bottom: 30px;
+            }
+            .data-table table {
+                width: 100%;
+            }
+            .data-table table input {
+                border: 0 solid transparent;
+                width: 100%;
+            }
+            .data-table tr td:first-child,
+            .data-table tr th:first-child {
+                width: 80px;
+            }
+            .echo {
+                padding-top: 10px;
+            }
+            table {
+                border: 1px solid #131313; 
+                border-collapse: collapse
+            }
+            td, th {
+                border: solid 1px lightgrey;
+            }
+            th {
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Welcome to basic database filler</h1>
+            <div>
+                <label>Host:</label>
+                <br>
+                <input type="text" name="host" placeholder="">
+                <br>
+                <label>Username:</label>
+                <br>
+                <input type="text" name="username" placeholder="">
+                <br>
+                <label>Password:</label>
+                <br>
+                <input type="password" name="password" placeholder="">
+                <br>
+                <label>Database:</label>
+                <br>
+                <input type="text" name="database" placeholder="">
+                <br>
+                <label>Table:</label>
+                <br>
+                <input type="text" name="table" placeholder="">
+            </div>
+        </div>
+        <br>
+        <div class="container">
+            <h2>Actual content</h2>
+            <div class="data-table">
+                <table>
+                    <tr>
+                        <th>site_id</th>
+                        <th>url</th>
+                        <th>override_url</th>
+                        <th>row actions</th>
+                    </tr>
+                </table>
+                <br>
+                <button name="add-row" class="btn btn-secondary">Add row</button>
+            </div>
+            <button name="submit-data" class="btn btn-primary">Submit data</button>
+            <div class="echo"></div>
+        </div>
+    </body>
+    <script type="text/javascript">
+        var rowTemplate = 
+            '<tr class="actual-data">' +
+                '<td><input type="text" name="site_id" /></td>' +
+                '<td><input type="text" name="url" /></td>' +
+                '<td><input type="text" name="override_url" /></td>' +
+                '<td><button class="btn btn-danger">Delete row</button></td>' +
+            '</tr>';
+        $(document).ready(function() {
+            $('[name="add-row"]').click(function() {
+                $('.data-table table').append(rowTemplate)
+            });
+            $('body').on('click', 'td button', function() {
+                $(this).parents('tr').remove();
+            });
+            $('[name="submit-data"]').click(function() {
+                $('.echo').prepend('<div class="alert alert-warning" role="alert">' +
+                    'Processing...' +
+                '</div>');
+                var dataArr = [];
+                var sqlConfig = {
+                    host: $('[name="host"]').val(),
+                    user: $('[name="username"]').val(),
+                    password: $('[name="password"]').val(),
+                    database: $('[name="database"]').val(),
+                    table: $('[name="table"]').val()
+                }
+                $('.data-table table tr.actual-data').each(function() {
+                    var dataId = $(this).find('[name="site_id"]').val(),
+                        dataUrl = $(this).find('[name="url"]').val(),
+                        dataOverrideUrl = $(this).find('[name="override_url"]').val(); 
+                    dataArr.push([dataId, dataUrl, dataOverrideUrl]);
+                });
+                $.post('/senddata', {
+                    sqlconf: sqlConfig,
+                    sqldata: dataArr
+                }, function(echo) {
+                    if(echo.code == undefined) {
+                        $('.echo').prepend('<div class="alert alert-success" role="alert">' +
+                            'Successfully added to database' +
+                        '</div>');
+                        $('.data-table table tr.actual-data').each(function() {
+                            $(this).remove();
+                        });
+                    }                        
+                    else {
+                        $('.echo').prepend('<div class="alert alert-danger" role="alert">' +
+                            echo.code + ' ' + echo.syscall + ' ' + echo.address +
+                        '</div>');
+                    }
+                    console.log(echo.code, echo.syscall, echo.address);
+                });
+            });
+        });
+    </script>
+</html>
